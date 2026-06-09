@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lousa Mágica com IA</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            box-sizing: border-box;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: #fff;
+            cursor: crosshair;
+            width: 100%;
+            height: auto;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #333;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 0 25px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        .status {
+            font-size: 14px;
+            color: #666;
+            margin-top: -10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Quadro de Desenho -->
+        <canvas id="telaDesenho" width="800" height="500"></canvas>
+        
+        <!-- Campo de Escrita e Comando -->
+        <div class="input-area">
+            <input type="text" id="campoTexto" placeholder="Digite 'flor' ou o que quiser desenhar e aperte Enter...">
+            <button id="btnGerar">Gerar com IA</button>
+        </div>
+        <div id="status" class="status">Você também pode desenhar livremente com o mouse no quadro acima.</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('telaDesenho');
+        const ctx = canvas.getContext('2d');
+        const campoTexto = document.getElementById('campoTexto');
+        const btnGerar = document.getElementById('btnGerar');
+        const statusTexto = document.getElementById('status');
+
+        let desenhando = false;
+
+        // Configurações do traço livre (Mouse)
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+
+        // --- LÓGICA DO MOUSE (DESENHO LIVRE) ---
+        canvas.addEventListener('mousedown', (e) => { desenhando = true; desenhar(e); });
+        canvas.addEventListener('mousemove', desenhar);
+        canvas.addEventListener('mouseup', () => { desenhando = false; ctx.beginPath(); });
+        canvas.addEventListener('mouseleave', () => { desenhando = false; ctx.beginPath(); });
+
+        function desenhar(e) {
+            if (!desenhando) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        // --- LÓGICA DA IA CORRIGIDA ---
+        async function gerarDesenhoIA() {
+            const termo = campoTexto.value.trim().toLowerCase();
+            
+            if (!termo) return;
+
+            statusTexto.innerText = `IA está desenhando "${termo}"... Aguarde alguns segundos.`;
+            
+            const img = new Image();
+            
+            // CRUCIAL: Diz ao navegador para permitir que a imagem externa seja desenhada no Canvas
+            img.crossOrigin = "anonymous"; 
+
+            // Formatação correta da URL da IA (substituindo espaços por +)
+            const estiloPrompt = "simple clipart vector style isolated white background";
+            const promptCompleto = `${termo} ${estiloPrompt}`.replace(/\s+/g, '+');
+            
+            // Nova URL base oficial do Pollinations AI
+            img.src = `https://pollinations.ai{promptCompleto}?width=800&height=500&nologo=true`;
+
+            // Quando a IA responde com a imagem com sucesso
+            img.onload = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpa o quadro
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // Desenha a imagem na tela
+                statusTexto.innerText = `Pronto! Desenho de "${termo}" gerado com sucesso.`;
+                campoTexto.value = ""; // Limpa o campo de texto
+            };
+
+            // Se a imagem falhar por erro de rede ou servidor fora do ar
+            img.onerror = function() {
+                statusTexto.innerText = "Erro ao tentar gerar o desenho. Verifique sua conexão ou tente outra palavra.";
+            };
+        }
+
+        // Dispara a IA ao clicar no botão
+        btnGerar.addEventListener('click', gerarDesenhoIA);
+
+        // Dispara a IA ao apertar a tecla "Enter" no teclado
+        campoTexto.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                gerarDesenhoIA();
+            }
+        });
+    </script>
+
+</body>
+</html>
