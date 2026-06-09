@@ -1,2 +1,0 @@
-# LousaMagica
-LousaMagica
